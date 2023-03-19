@@ -94,14 +94,14 @@ get_file_with_checkboxes() {
   # is the current working directory (e.g. $HOME)
   if [ "${dir}" = "${PWD}" ]; then
     if grep -qs "${_checkbox_pattern}" -- *.md; then
-      _files="$(grep -lZ "${_checkbox_pattern}" -- *.md | xargs -0 ls -t)"
+      _files="$(grep -lZ "${_checkbox_pattern}" -- *.md | xargs -0 ls -t | grep '\.md$')"
     fi
-  else # IF THERE'RE NO FILES WITH CHECKBOXES THE LIST DOESN'T SHOW UP
-    cd "${dir}" || exit # THE PROBLEM IS, YOU CAN'T CREATE NEW ONES WITHOUT IT
+  else
+    cd "${dir}" || exit
     _is_exist=$(find . -type f -name "*.md" -not -path '*/.*' \
       -exec grep -q "${_checkbox_pattern}" {} + -print | head -n 1)
     [ -n "${_is_exist}" ] && _files="$(grep -lZR --exclude-dir=".*" \
-      "${_checkbox_pattern}" -- *.md | xargs -0 ls -t)"
+      "${_checkbox_pattern}" -- *.md | xargs -0 ls -t | grep '\.md$')"
   fi
 
   # Choose a file from the list
