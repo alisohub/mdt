@@ -4,6 +4,7 @@
 # Configuration ################################
 
 dir="${MDT_DIR:-$PWD}"
+log="${MDT_DIR}/log.txt"
 inbox="${MDT_INBOX}"
 color="${MDT_MAIN_COLOR:-5}"
 prompt="${MDT_PROMPT:-◆}"
@@ -95,8 +96,8 @@ get_file_with_checkboxes() {
     if grep -qs "${_checkbox_pattern}" -- *.md; then
       _files="$(grep -lZ "${_checkbox_pattern}" -- *.md | xargs -0 ls -t)"
     fi
-  else
-    cd "${dir}" || exit
+  else # IF THERE'RE NO FILES WITH CHECKBOXES THE LIST DOESN'T SHOW UP
+    cd "${dir}" || exit # THE PROBLEM IS, YOU CAN'T CREATE NEW ONES WITHOUT IT
     _is_exist=$(find . -type f -name "*.md" -not -path '*/.*' \
       -exec grep -q "${_checkbox_pattern}" {} + -print | head -n 1)
     [ -n "${_is_exist}" ] && _files="$(grep -lZR --exclude-dir=".*" \
@@ -128,6 +129,8 @@ get_file_with_checkboxes() {
 
 list_open_todos() {
   [ -f "$1" ] && _file="$1" || exit
+
+  echo "$_file" > "$MDT_DIR/log.txt"
 
   if ! grep -q "\- \[ \]" "${_file}" 2> /dev/null; then
     printf "%b\n" "Yey,\033[38;5;${color}m nothing\033[m left to do!" && exit
@@ -187,7 +190,9 @@ die() {
 # If inbox isn't specified, use default. 
 # If it doesn't exist, ask to create.
 set_inbox() {
-  _default_inbox="${dir}/todo.md"
+  [ -f "${log}" ] || touch "${log}"
+  _default_inbox=$(head -n 1 "${log}") && \
+  [ -f "${_default_inbox}" ] || _default_inbox="${dir}/todo.md"
   inbox="${inbox:-$_default_inbox}"
 
   if [ ! -f "${inbox}" ]; then
@@ -211,13 +216,19 @@ main() {
       list_open_todos "$(get_file_with_checkboxes ' ')"
       ;;
     "List inbox")
-      set_inbox && list_open_todos "${inbox}"
+      set_inbox && \
+      _file_name=$(basename "$inbox" .md) && \
+      gum spin --spinner moon --title "$_file_name" -- sleep 0.25 && \
+      list_open_todos "${inbox}"
       ;;
     "Add")
       add_todo "$(get_file_with_checkboxes)"
       ;;
     "Add inbox")
-      set_inbox && add_todo "${inbox}"
+      set_inbox && \
+      _file_name=$(basename "$inbox" .md) && \
+      gum spin --spinner moon --title "$_file_name" -- sleep 0.25 && \
+      add_todo "${inbox}"
       ;;
     "Edit")
       edit_todo "$(get_file_with_checkboxes)"
